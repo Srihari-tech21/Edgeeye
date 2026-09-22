@@ -1,17 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_DEMO_RECORDS, DEMO_SCENARIOS } from '../data/mockData';
+import { storageService } from '../services/storageService';
+import { DEMO_SCENARIOS } from '../data/mockData';
 
 const RecordContext = createContext();
 
 export function RecordProvider({ children }) {
-  const [records, setRecords] = useState(() => {
-    try {
-      const saved = localStorage.getItem('edgeayu_records');
-      return saved ? JSON.parse(saved) : INITIAL_DEMO_RECORDS;
-    } catch (e) {
-      return INITIAL_DEMO_RECORDS;
-    }
-  });
+  const [records, setRecords] = useState(() => storageService.getRecords());
 
   const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [demoOfflineMode, setDemoOfflineMode] = useState(() => {
@@ -62,15 +56,6 @@ export function RecordProvider({ children }) {
     };
   }, []);
 
-  // Sync to local storage
-  useEffect(() => {
-    try {
-      localStorage.setItem('edgeayu_records', JSON.stringify(records));
-    } catch (e) {
-      console.warn("LocalStorage save error:", e);
-    }
-  }, [records]);
-
   useEffect(() => {
     try {
       localStorage.setItem('edgeayu_demo_offline', JSON.stringify(demoOfflineMode));
@@ -80,16 +65,17 @@ export function RecordProvider({ children }) {
   }, [demoOfflineMode]);
 
   const addRecord = (newRecord) => {
-    setRecords((prev) => [newRecord, ...prev]);
+    const updated = storageService.saveRecord(newRecord);
+    setRecords(updated);
   };
 
   const getRecordById = (id) => {
-    return records.find((r) => r.id === id) || records[0];
+    return storageService.getRecord(id);
   };
 
   const resetDemoData = () => {
-    setRecords(INITIAL_DEMO_RECORDS);
-    localStorage.removeItem('edgeayu_records');
+    const res = storageService.clearRecords();
+    setRecords(res);
   };
 
   const loadScenario = (scenarioId) => {
@@ -112,7 +98,6 @@ export function RecordProvider({ children }) {
     }));
   };
 
-  // Determine effective offline display status
   const effectiveOffline = demoOfflineMode || !isOnline;
 
   return (

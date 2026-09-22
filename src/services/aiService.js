@@ -1,15 +1,20 @@
 /**
- * EdgeAyu Local AI & Guideline Processing Service Abstraction
+ * EdgeAyu Local AI & Service Abstraction Module
+ * 
+ * Future Production Integration Roadmap:
+ * React App → FastAPI (localhost:8000) → Local OCR → Local LLM → Guideline Engine
  */
 
 import { DEMO_SCAN_SAMPLES } from '../data/mockData';
+import { triageEngine } from './triageEngine';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Simulates local OCR camera processing of medical readings/notes
- */
-export async function scanVitalsImage(sampleId = "sample-bp-1", onProgress = null) {
+export async function captureImage() {
+  return { success: true, timestamp: Date.now() };
+}
+
+export async function extractVitals(sampleId = "sample-bp-1", onProgress = null) {
   if (onProgress) onProgress("Initializing on-device vision OCR engine...", 20);
   await delay(350);
 
@@ -42,10 +47,11 @@ export async function scanVitalsImage(sampleId = "sample-bp-1", onProgress = nul
   };
 }
 
-/**
- * Simulates local speech-to-text and symptom extraction
- */
-export async function parseSpeechInput(simulatedTranscript = "") {
+export async function scanVitalsImage(sampleId = "sample-bp-1", onProgress = null) {
+  return extractVitals(sampleId, onProgress);
+}
+
+export async function parseSymptoms(simulatedTranscript = "") {
   await delay(700);
   const text = simulatedTranscript || "Patient presents with severe headache, dizziness when standing up, fatigue and mild nausea for 2 days.";
   
@@ -69,18 +75,11 @@ export async function parseSpeechInput(simulatedTranscript = "") {
   };
 }
 
-/**
- * Core Local Triage Engine
- * Evaluates vitals + symptoms against embedded clinical guidelines offline
- */
-export async function evaluateTriage(assessmentData, onProgress = null) {
-  const { vitals = {}, symptoms = [], rawSymptomsText = "", redFlags = {} } = assessmentData;
-  const sys = Number(vitals.bpSystolic) || 120;
-  const dia = Number(vitals.bpDiastolic) || 80;
-  const pulse = Number(vitals.pulse) || 75;
-  const spo2 = Number(vitals.spo2) || 98;
-  const temp = Number(vitals.temperature) || 37.0;
+export async function parseSpeechInput(simulatedTranscript = "") {
+  return parseSymptoms(simulatedTranscript);
+}
 
+export async function evaluateTriage(assessmentData, onProgress = null) {
   if (onProgress) onProgress("Processing clinical data locally...", 25);
   await delay(300);
 
@@ -90,103 +89,13 @@ export async function evaluateTriage(assessmentData, onProgress = null) {
   if (onProgress) onProgress("Generating triage observations...", 95);
   await delay(300);
 
-  const flaggedReasons = [];
-  const matchedGuidelines = [];
-  const recommendations = [];
-
-  let priority = "ROUTINE";
-
-  // Check critical Red Flags
-  const activeRedFlags = Object.entries(redFlags).filter(([_, val]) => Boolean(val)).map(([key]) => {
-    switch(key) {
-      case 'chestPain': return 'Chest pain';
-      case 'severeBreathingDifficulty': return 'Severe breathing difficulty';
-      case 'lossOfConsciousness': return 'Loss of consciousness';
-      case 'acuteConfusion': return 'Acute confusion';
-      case 'severeBleeding': return 'Severe bleeding';
-      case 'severeWeakness': return 'Severe weakness';
-      default: return key;
-    }
-  });
-
-  const hasCriticalRedFlag = activeRedFlags.length > 0;
-
-  if (hasCriticalRedFlag) {
-    priority = "URGENT CLINICAL ATTENTION";
-    flaggedReasons.push(`Emergency Red Flags Reported: ${activeRedFlags.join(', ')} → Requires immediate emergency referral`);
-    matchedGuidelines.push("WHO Emergency Care Triage Protocol for Low-Resource Settings");
-    recommendations.push("Follow local emergency protocols and seek immediate professional medical assistance.");
-    recommendations.push("Arrange urgent emergency transport to nearest acute facility.");
-  }
-
-  // Blood Pressure Rule Check
-  if (sys >= 160 || dia >= 100) {
-    if (!hasCriticalRedFlag) priority = "HIGH PRIORITY";
-    flaggedReasons.push(`Blood Pressure ${sys}/${dia} mmHg → Elevated reading detected (Stage 2 Hypertensive Risk)`);
-    matchedGuidelines.push("WHO HEARTS - High Risk Hypertensive Protocol");
-    recommendations.push("Refer to nearest health facility for medical evaluation");
-    recommendations.push("Monitor vitals regularly in quiet resting position");
-  } else if (sys >= 140 || dia >= 90) {
-    if (priority === "ROUTINE") priority = "REVIEW REQUIRED";
-    flaggedReasons.push(`Blood Pressure ${sys}/${dia} mmHg → Stage 1 Pre-hypertensive threshold`);
-    matchedGuidelines.push("WHO HEARTS Hypertension Protocol");
-    recommendations.push("Follow up within 24 hours");
-  } else {
-    flaggedReasons.push(`Blood Pressure ${sys}/${dia} mmHg → Normal resting range`);
-  }
-
-  // Oxygen Saturation Rule Check
-  if (spo2 < 92) {
-    if (!hasCriticalRedFlag) priority = "HIGH PRIORITY";
-    flaggedReasons.push(`SpO2 ${spo2}% → Low oxygen saturation detected (Critical < 92%)`);
-    matchedGuidelines.push("WHO Oxygen Therapy Protocol");
-    recommendations.push("Administer emergency oxygen if available and arrange transfer");
-  } else if (spo2 <= 94) {
-    if (priority === "ROUTINE") priority = "HIGH PRIORITY";
-    flaggedReasons.push(`SpO2 ${spo2}% → Borderline oxygen saturation detected`);
-    recommendations.push("Monitor SpO2 regularly");
-  } else {
-    flaggedReasons.push(`SpO2 ${spo2}% → Normal oxygen saturation`);
-  }
-
-  // Pulse Rule Check
-  if (pulse > 100) {
-    flaggedReasons.push(`Pulse ${pulse} bpm → Increased pulse detected (Tachycardia)`);
-  }
-
-  // Temperature Rule Check
-  if (temp >= 38.0) {
-    if (priority === "ROUTINE") priority = "REVIEW REQUIRED";
-    flaggedReasons.push(`Temperature ${temp}°C → Fever reading detected`);
-    matchedGuidelines.push("IMAI Fever Protocol");
-  }
-
-  // Symptoms check
-  if (rawSymptomsText || symptoms.length > 0) {
-    const symptomSummary = symptoms.length > 0 ? symptoms.slice(0, 2).join(" + ") : "Reported complaints";
-    flaggedReasons.push(`Symptoms ${symptomSummary} → Requires clinical review`);
-  }
-
-  if (recommendations.length === 0) {
-    recommendations.push("Educate on warning signs");
-    recommendations.push("Standard routine health maintenance");
-  }
-
+  const result = triageEngine.evaluate(assessmentData);
   return {
     success: true,
-    priority,
-    hasCriticalRedFlag,
-    urgentMessage: hasCriticalRedFlag ? "Emergency warning signs were reported. Follow local emergency protocols and seek immediate professional medical assistance." : null,
-    vitals: { bpSystolic: sys, bpDiastolic: dia, pulse, spo2, temperature: temp },
-    symptoms,
-    rawSymptomsText,
-    flaggedReasons,
-    redFlags,
-    matchedGuidelines: matchedGuidelines.length > 0 ? matchedGuidelines : ["Standard IMAI Triage Protocol"],
-    recommendations,
-    processingMode: "LOCAL / OFFLINE",
-    confidenceScore: 0.96,
-    timestamp: "Just now",
-    dateFormatted: new Date().toLocaleString()
+    ...result
   };
+}
+
+export function generateExplanation(result) {
+  return result?.observations || [];
 }
