@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-light: #F7FAF9;
+    --card-bg: #FFFFFF;
+    --border-color: #DCE7E2;
+    --primary-green: #087F5B;
+    --dark-green: #075E49;
+    --mint-bg: #E8F5F0;
+    --text-main: #17211D;
+    --text-muted: #66736D;
+  }
+
+  body {
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+/* Light Healthcare SaaS Utilities */
+.saas-card {
+  background-color: #ffffff;
+  border: 1px solid #DCE7E2;
+  border-radius: 0.85rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+
+.saas-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.saas-card-hover:hover {
+  border-color: #087F5B;
+  box-shadow: 0 6px 16px -4px rgba(8, 127, 91, 0.12);
+}
+
+/* Reticle scan frame effect */
+@keyframes reticle-scan {
+  0% {
+    top: 10%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 85%;
+    opacity: 1;
+  }
+  100% {
+    top: 10%;
+    opacity: 0.8;
+  }
+}
+
+.scanner-laser-light {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #087F5B, #20C997, #087F5B, transparent);
+  box-shadow: 0 0 12px #20C997;
+  animation: reticle-scan 2.2s ease-in-out infinite;
+}
+
+/* Audio waveform bars animation */
+@keyframes audio-wave {
+  0%, 100% { height: 6px; }
+  50% { height: 22px; }
+}
+
+.wave-bar-light {
+  animation: audio-wave 1.2s ease-in-out infinite;
+}
+.wave-bar-light:nth-child(1) { animation-delay: 0.1s; }
+.wave-bar-light:nth-child(2) { animation-delay: 0.3s; }
+.wave-bar-light:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar-light:nth-child(4) { animation-delay: 0.4s; }
+.wave-bar-light:nth-child(5) { animation-delay: 0.15s; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F7FAF9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
